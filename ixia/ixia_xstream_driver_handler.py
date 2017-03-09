@@ -224,11 +224,3 @@ class IxiaXstreamDriverHandler(DriverHandlerBase):
 
     def set_speed_manual(self, command_logger=None):
         pass
-
-
-if __name__ == '__main__':
-    from cloudshell.core.logger.qs_logger import get_qs_logger
-
-    gglass = IxiaXstreamDriverHandler()
-    plogger = get_qs_logger('Autoload', 'GlimmerGlass', 'GlimmerGlass')
-    gglass.login('192.168.2.41:10033', 'admin', 'password', plogger)
