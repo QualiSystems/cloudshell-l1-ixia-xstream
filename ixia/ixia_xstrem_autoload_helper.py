@@ -46,7 +46,7 @@ class IxiaXstreamAutoloadHelper(object):
                         port_mapping[port] = out_ports[in_ports.index(port)]
         else:
             filtering_table = snmp_handler.get_table(
-                "NETOPTICS-XFAM-FILTER-MIB", "filterRuleAction").filter_by_column("filterRuleAction", "redir")
+                "NETOPTICS-XFAM-FILTER-MIB", "filterRuleAction").filter_by_column("ction", "redir")
             for key, value in filtering_table.iteritems():
                 if value:
                     in_port = value["filterRuleInPorts"]

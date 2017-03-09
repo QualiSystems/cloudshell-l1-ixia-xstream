@@ -8,7 +8,7 @@ from common.configuration_parser import ConfigurationParser
 from common.driver_handler_base import DriverHandlerBase
 from common.resource_info import ResourceInfo
 from ixia.ixia_xstrem_autoload_helper import IxiaXstreamAutoloadHelper
-from cloudshell.snmp.quali_snmp import QualiSnmp, SNMPV3Parameters, SNMPV2Parameters
+from cloudshell.snmp.quali_snmp import QualiSnmp, SNMPV3Parameters, SNMPV2Parameters, PySnmpError
 
 
 class IxiaXstreamDriverHandler(DriverHandlerBase):
@@ -152,75 +152,44 @@ class IxiaXstreamDriverHandler(DriverHandlerBase):
         if self._service_mode.lower() == "ssh":
             pass
         elif self._service_mode.lower() == "snmp":
-            index = self._incr_ctag()
-            self._snmp_handler.set([(("NETOPTICS-XFAM-FILTER-MIB", "filterRuleAction", index), 1),
-                                    (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleName", index),
-                                     "{0} to {1}".format(src_port, dst_port)),
-                                    (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleInPorts", index), src_port),
-                                    (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRedirPorts", index), dst_port),
-                                    (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleEnabled", index), 1),
-                                    (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRowstatus", index), 4)])
-            src_in_port = src_port
-
-            dst_out_port = dst_port
-
-            if self._port_logical_mode.lower() == "logical":
-                src_in_port = str(10000 + int(src_in_port.split('-')[0]))
-                dst_out_port = str(20000 + int(dst_out_port.split('-')[1]))
-
-            command = "ent-crs-fiber::{0},{1}:{2};".format(src_in_port, dst_out_port, self._incr_ctag())
-            command_result = self._session.send_command(command, re_string=self._prompt)
-            command_logger.info(command_result)
+            self.map_bidi(src_port=src_port, dst_port=dst_port, command_logger=command_logger)
 
     def map_bidi(self, src_port, dst_port, command_logger=None):
-        if self._service_mode.lower() == "scpi":
+        if self._service_mode.lower() == "ssh":
             pass
-        elif self._service_mode.lower() == "tl1":
-            if self._port_logical_mode.lower() == "logical":
-                source_port = str(src_port[1]).split('-')
-                destination_port = str(dst_port[1]).split('-')
-                src_in_port = str(10000 + int(source_port[0]))
-                dst_in_port = str(10000 + int(destination_port[0]))
-                src_out_port = str(20000 + int(source_port[1]))
-                dst_out_port = str(20000 + int(destination_port[1]))
-
-                command = "ent-crs-fiber::{0}&{1},{2}&{3}:{4};".format(src_in_port, dst_in_port, dst_out_port,
-                                                                       src_out_port, self._incr_ctag())
-                command_result = self._session.send_command(command, re_string=self._prompt)
-                command_logger.info(command_result)
-            else:
-                raise Exception(self.__class__.__name__,
-                                "Bidirectional port mapping could be done only in logical port_mode " +
-                                "(current mode: '" + self._port_logical_mode + "'")
+        elif self._service_mode.lower() == "snmp":
+            rule_name_table = self._snmp_handler.get_table("NETOPTICS-XFAM-FILTER-MIB", "filterRuleName")
+            index = self._incr_ctag()
+            while index in rule_name_table.keys():
+                index = self._incr_ctag()
+            src_in_port = int(src_port[-1])
+            dst_out_port = int(dst_port[-1])
+            try:
+                self._snmp_handler.set([(("NETOPTICS-XFAM-FILTER-MIB", "filterRuleAction", index), 1),
+                                        (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleName", index),
+                                         "{0} to {1}".format(src_in_port, dst_out_port)),
+                                        (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleInPorts", index), src_in_port),
+                                        (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRedirPorts", index), dst_out_port),
+                                        (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleEnabled", index), 1),
+                                        (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRowstatus", index), 4)])
+            except PySnmpError as e:
+                if not self._snmp_handler.get_property("NETOPTICS-XFAM-FILTER-MIB", "filterRuleName", index):
+                    raise
 
     def map_clear_to(self, src_port, dst_port, command_logger=None):
-        if self._service_mode.lower() == "scpi":
-            pass
-        elif self._service_mode.lower() == "tl1":
-            src_in_port = src_port[1]
-            if self._port_logical_mode.lower() == "logical":
-                source_port = src_port[1].split('-')
-                src_in_port = str(10000 + int(source_port[0]))
-
-            command = "dlt-crs-fiber::{0}:{1};".format(src_in_port, self._incr_ctag())
-
-            self._session.send_command(command, re_string=self._prompt)
+        self.map_clear(src_port, dst_port, command_logger)
 
     def map_clear(self, src_port, dst_port, command_logger=None):
-        if self._service_mode.lower() == "scpi":
+        if self._service_mode.lower() == "ssh":
             pass
-        elif self._service_mode.lower() == "tl1":
-            if self._port_logical_mode.lower() == "logical":
-                source_port = src_port[1].split('-')
-                destination_port = dst_port[1].split('-')
-                src_in_port = str(10000 + int(source_port[0]))
-                dst_in_port = str(10000 + int(destination_port[0]))
-
-                command = "dlt-crs-fiber::{0}&{1}:{2};".format(src_in_port, dst_in_port, self._incr_ctag())
-
-                self._session.send_command(command, re_string=self._prompt)
-            else:
-                self.map_clear_to(src_port, dst_port, command_logger)
+        elif self._service_mode.lower() == "snmp":
+            src_in_port = int(src_port[-1])
+            dst_out_port = int(dst_port[-1])
+            rule_name_table = self._snmp_handler.get_table("NETOPTICS-XFAM-FILTER-MIB", "filterRuleName")
+            current_map = dict([(v['filterRuleName'].lower(), k) for k, v in rule_name_table.iteritems()])
+            mapping_id = current_map.get("{0} to {1}".format(src_in_port, dst_out_port))
+            if mapping_id:
+                self._snmp_handler.set([(("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRowstatus", mapping_id), 6)])
 
     def set_speed_manual(self, command_logger=None):
         pass
