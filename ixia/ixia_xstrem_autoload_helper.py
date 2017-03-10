@@ -46,11 +46,11 @@ class IxiaXstreamAutoloadHelper(object):
                         port_mapping[port] = out_ports[in_ports.index(port)]
         else:
             filtering_table = snmp_handler.get_table(
-                "NETOPTICS-XFAM-FILTER-MIB", "filterRuleAction").filter_by_column("ction", "redir")
+                "NETOPTICS-XFAM-FILTER-MIB", "filterRuleAction").filter_by_column("ction", "'redir'")
             for key, value in filtering_table.iteritems():
                 if value:
-                    in_port = value["filterRuleInPorts"]
-                    out_port = value["filterRuleRedirPorts"]
+                    in_port = snmp_handler.get_property("NETOPTICS-XFAM-FILTER-MIB", "filterRuleInPorts", key)
+                    out_port =snmp_handler.get_property("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRedirPorts", key)
                     if "-" in in_port or "-" in out_port:
                         continue
 
@@ -77,12 +77,11 @@ class IxiaXstreamAutoloadHelper(object):
                 if len(port_speed_int) > 4:
                     port_speed = "10 Gbps"
 
-            ports[port_index] = {"state": port_data["portAdmin"].title(),
+            ports[port_index] = {"state": port_data["portAdmin"].replace("'", "").title(),
                                  "speed": port_speed,
                                  "auto_neg": "on" in snmp_handler.get_property("NETOPTICS-XFAM-PORTS-MIB", "portAutoNegotiation",
                                                                        port_index).lower()}
-
-            mapped_to = port_mapping.get(port_index)
+            mapped_to = port_mapping.get(str(port_index))
             if mapped_to:
                 ports[port_index]["mapped_to"] = mapped_to
 

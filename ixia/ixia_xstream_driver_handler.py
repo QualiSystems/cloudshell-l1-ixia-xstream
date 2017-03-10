@@ -152,9 +152,9 @@ class IxiaXstreamDriverHandler(DriverHandlerBase):
         if self._service_mode.lower() == "ssh":
             pass
         elif self._service_mode.lower() == "snmp":
-            self.map_bidi(src_port=src_port, dst_port=dst_port, command_logger=command_logger)
+            self.map_bidi(src_port=src_port, dst_port=dst_port, command_logger=command_logger, uni=True)
 
-    def map_bidi(self, src_port, dst_port, command_logger=None):
+    def map_bidi(self, src_port, dst_port, command_logger=None, uni=False):
         if self._service_mode.lower() == "ssh":
             pass
         elif self._service_mode.lower() == "snmp":
@@ -175,11 +175,26 @@ class IxiaXstreamDriverHandler(DriverHandlerBase):
             except PySnmpError as e:
                 if not self._snmp_handler.get_property("NETOPTICS-XFAM-FILTER-MIB", "filterRuleName", index):
                     raise
+            if not uni:
+                index = self._incr_ctag()
+                while index in rule_name_table.keys():
+                    index = self._incr_ctag()
+                try:
+                    self._snmp_handler.set([(("NETOPTICS-XFAM-FILTER-MIB", "filterRuleAction", index), 1),
+                                            (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleName", index),
+                                             "{0} to {1}".format(dst_out_port, src_in_port)),
+                                            (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleInPorts", index), dst_out_port),
+                                            (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRedirPorts", index), src_in_port),
+                                            (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleEnabled", index), 1),
+                                            (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRowstatus", index), 4)])
+                except PySnmpError as e:
+                    if not self._snmp_handler.get_property("NETOPTICS-XFAM-FILTER-MIB", "filterRuleName", index):
+                        raise
 
     def map_clear_to(self, src_port, dst_port, command_logger=None):
-        self.map_clear(src_port, dst_port, command_logger)
+        self.map_clear(src_port, dst_port, command_logger, uni=True)
 
-    def map_clear(self, src_port, dst_port, command_logger=None):
+    def map_clear(self, src_port, dst_port, command_logger=None, uni=False):
         if self._service_mode.lower() == "ssh":
             pass
         elif self._service_mode.lower() == "snmp":
@@ -190,6 +205,10 @@ class IxiaXstreamDriverHandler(DriverHandlerBase):
             mapping_id = current_map.get("{0} to {1}".format(src_in_port, dst_out_port))
             if mapping_id:
                 self._snmp_handler.set([(("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRowstatus", mapping_id), 6)])
+            if not uni:
+                mapping_id = current_map.get("{0} to {1}".format(dst_out_port, src_in_port))
+                if mapping_id:
+                    self._snmp_handler.set([(("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRowstatus", mapping_id), 6)])
 
     def set_speed_manual(self, command_logger=None):
         pass
