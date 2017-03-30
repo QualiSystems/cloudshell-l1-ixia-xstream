@@ -33,6 +33,7 @@ if __name__ == '__main__':
     request_manager.bind_command('setstateid', (RequestHandler.set_state_id, request_handler))
     request_manager.bind_command('getstateid', (RequestHandler.get_state_id, request_handler))
     request_manager.bind_command('mapuni', (RequestHandler.map_uni, request_handler))
+    request_manager.bind_command('maptap', (RequestHandler.map_tap, request_handler))
     request_manager.bind_command('mapbidi', (RequestHandler.map_bidi, request_handler))
     request_manager.bind_command('mapclearto', (RequestHandler.map_clear_to, request_handler))
     request_manager.bind_command('mapclear', (RequestHandler.map_clear, request_handler))

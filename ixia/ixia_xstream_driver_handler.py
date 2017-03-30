@@ -98,9 +98,9 @@ class IxiaXstreamDriverHandler(DriverHandlerBase):
         self._resource_info.add_attribute("Type", device_data["type"])
         self._resource_info.add_attribute("Version", device_data["version"])
         self._resource_info.add_attribute("Model", device_data["model"])
-        self._resource_info.set_model_name(device_data["model"])
-        self._resource_info.set_serial_number(device_data["serial"])
         model_name = device_data["model"]
+        self._resource_info.set_model_name(model_name)
+        self._resource_info.set_serial_number(device_data["serial"])
 
         # if self._port_logical_mode.lower() == "logical":
         for port_id, port_data in device_data["ports"].iteritems():
@@ -114,101 +114,89 @@ class IxiaXstreamDriverHandler(DriverHandlerBase):
             port_resource_info.add_attribute("State", port_data['state'])
             port_resource_info.add_attribute("Protocol Type", 0)
             self._resource_info.add_child(port_id, port_resource_info)
-        # else:
-        #     for port_data in port_map_list:
-        #         port_map_match = re.search(r"IPORTID=(?P<src_port>\d+).*IPORTNAME=(?P<src_port_name>\S+),IP.*" +
-        #                                    "OPORTID=(?P<dst_port>\d+).*OPORTNAME=(?P<dst_port_name>\S+),OP.*",
-        #                                    port_data, re.DOTALL)
-        #         if port_map_match is not None:
-        #             port_map_dict = port_map_match.groupdict()
-        #             if int(port_map_dict['src_port']) > 0 and \
-        #                             int(port_map_dict['dst_port']) > 0:
-        #                 src_port = port_map_dict["src_port"]
-        #                 dst_port = port_map_dict["dst_port"]
-        #                 # self._mapping_info[dst_port] = src_port
-        #                 self._mapping_info[src_port] = dst_port
-        #     for port_data in port_list:
-        #         port_info_match = re.search(r"PORTID=(?P<id>\d+).*PORTNAME=(?P<name>(IN|OUT)\d+)" +
-        #                                     ".*PORTHEALTH=(?P<state>good|bad)", port_data, re.DOTALL)
-        #         if port_info_match is not None:
-        #             port_info_dict = port_info_match.groupdict()
-        #             port_resource_info = ResourceInfo()
-        #             port_resource_info.set_depth(1)
-        #             port_id = port_info_dict["id"]
-        #             port_resource_info.set_index(port_id)
-        #             port_resource_info.set_model_name(model_name)
-        #             # port_resource_info.set_name(port_info_dict["name"])
-        #             if port_id in self._mapping_info:
-        #                 port_resource_info.set_mapping(address_prefix + self._mapping_info[port_id])
-        #             if port_info_dict["state"].lower() == "good":
-        #                 port_resource_info.add_attribute("State", "Enable")
-        #             else:
-        #                 port_resource_info.add_attribute("State", "Disable")
-        #             port_resource_info.add_attribute("Protocol Type", 0)
-        #             self._resource_info.add_child(port_info_dict["id"], port_resource_info)
         return self._resource_info.convert_to_xml()
 
     def map_uni(self, src_port, dst_port, command_logger=None):
         if self._service_mode.lower() == "ssh":
             pass
         elif self._service_mode.lower() == "snmp":
-            self.map_bidi(src_port=src_port, dst_port=dst_port, command_logger=command_logger, uni=True)
+            self._add_snmp_filter(src_port, dst_port)
 
-    def map_bidi(self, src_port, dst_port, command_logger=None, uni=False):
+    def map_tap(self, src_port, dst_port, command_logger=None):
         if self._service_mode.lower() == "ssh":
             pass
         elif self._service_mode.lower() == "snmp":
+            self._add_snmp_filter(src_port, dst_port)
+
+    def map_bidi(self, src_port, dst_port, command_logger=None):
+        if self._service_mode.lower() == "ssh":
+            pass
+        elif self._service_mode.lower() == "snmp":
+            self._add_snmp_filter(src_port, dst_port)
+            self._add_snmp_filter(dst_port, src_port)
+
+    def _add_snmp_filter(self, src_port, dst_port):
+        src_in_port = src_port[-1]
+        dst_out_port = dst_port[-1]
+        existing_rules = self._get_filter(src_in_port)
+        if existing_rules:
+            self._append_snmp_filter(existing_rules, dst_out_port)
+        else:
             rule_name_table = self._snmp_handler.get_table("NETOPTICS-XFAM-FILTER-MIB", "filterRuleName")
             index = self._incr_ctag()
             while index in rule_name_table.keys():
                 index = self._incr_ctag()
-            src_in_port = int(src_port[-1])
-            dst_out_port = int(dst_port[-1])
-            try:
-                self._snmp_handler.set([(("NETOPTICS-XFAM-FILTER-MIB", "filterRuleAction", index), 1),
-                                        (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleName", index),
-                                         "{0} to {1}".format(src_in_port, dst_out_port)),
-                                        (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleInPorts", index), src_in_port),
-                                        (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRedirPorts", index), dst_out_port),
-                                        (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleEnabled", index), 1),
-                                        (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRowstatus", index), 4)])
-            except PySnmpError as e:
-                if not self._snmp_handler.get_property("NETOPTICS-XFAM-FILTER-MIB", "filterRuleName", index):
-                    raise
-            if not uni:
-                index = self._incr_ctag()
-                while index in rule_name_table.keys():
-                    index = self._incr_ctag()
-                try:
-                    self._snmp_handler.set([(("NETOPTICS-XFAM-FILTER-MIB", "filterRuleAction", index), 1),
-                                            (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleName", index),
-                                             "{0} to {1}".format(dst_out_port, src_in_port)),
-                                            (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleInPorts", index), dst_out_port),
-                                            (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRedirPorts", index), src_in_port),
-                                            (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleEnabled", index), 1),
-                                            (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRowstatus", index), 4)])
-                except PySnmpError as e:
-                    if not self._snmp_handler.get_property("NETOPTICS-XFAM-FILTER-MIB", "filterRuleName", index):
-                        raise
 
-    def map_clear_to(self, src_port, dst_port, command_logger=None):
-        self.map_clear(src_port, dst_port, command_logger, uni=True)
+            self._set_snmp_filter(src_in_port, dst_out_port, index)
+
+    def _append_snmp_filter(self, existing_rules, dst_out_port):
+        for index in existing_rules:
+            dst_port = self._snmp_handler.get_property(("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRedirPorts", index))
+            if dst_port:
+                dst_out_port = "{0},{1}".format(dst_port, dst_out_port)
+            try:
+                self._snmp_handler.set([(("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRedirPorts", index), dst_out_port)])
+            except PySnmpError as e:
+                pass
+            if dst_out_port not in self._snmp_handler.get_property("NETOPTICS-XFAM-FILTER-MIB",
+                                                                   "filterRuleRedirPorts", index):
+                raise Exception(self.__class__.__name__, "Failed to append filter rule")
+
+    def _set_snmp_filter(self, src_in_port, dst_out_port, index):
+        try:
+            self._snmp_handler.set([(("NETOPTICS-XFAM-FILTER-MIB", "filterRuleAction", index), 1),
+                                    (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleName", index),
+                                     "{0} to {1}".format(src_in_port, dst_out_port)),
+                                    (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleInPorts", index), dst_out_port),
+                                    (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRedirPorts", index), src_in_port),
+                                    (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleEnabled", index), 1),
+                                    (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRowstatus", index), 4)])
+        except PySnmpError as e:
+            if not self._snmp_handler.get_property("NETOPTICS-XFAM-FILTER-MIB", "filterRuleName", index):
+                raise
+
+    def map_clear_to(self, src_port_path, src_port_paths, command_logger=None):
+        self.map_clear(src_port_path, src_port_paths, command_logger, uni=True)
 
     def map_clear(self, src_port, dst_port, command_logger=None, uni=False):
         if self._service_mode.lower() == "ssh":
             pass
         elif self._service_mode.lower() == "snmp":
-            src_in_port = int(src_port[-1])
-            dst_out_port = int(dst_port[-1])
-            rule_name_table = self._snmp_handler.get_table("NETOPTICS-XFAM-FILTER-MIB", "filterRuleName")
-            current_map = dict([(v['filterRuleName'].lower(), k) for k, v in rule_name_table.iteritems()])
-            mapping_id = current_map.get("{0} to {1}".format(src_in_port, dst_out_port))
-            if mapping_id:
-                self._snmp_handler.set([(("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRowstatus", mapping_id), 6)])
-            if not uni:
-                mapping_id = current_map.get("{0} to {1}".format(dst_out_port, src_in_port))
-                if mapping_id:
-                    self._snmp_handler.set([(("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRowstatus", mapping_id), 6)])
+            src_in_port = src_port[-1]
+            for index in self._get_filter(src_in_port):
+                self._remove_filter(index)
+
+    def _get_filter(self, src_port):
+        result = []
+        rule_name_table = self._snmp_handler.get_table("NETOPTICS-XFAM-FILTER-MIB", "filterRuleInPorts")
+        for index, value in rule_name_table.iteritems():
+            filter_port = value.get("filterRuleInPorts", "")
+            if src_port in filter_port:
+                result.append(key)
+        return result
+
+    def _remove_filter(self, index):
+        self._snmp_handler.set([(("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRowstatus", index), 6)])
 
     def set_speed_manual(self, command_logger=None):
         pass

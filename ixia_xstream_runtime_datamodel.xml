@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Version=1.2.0 -->
 <ResourceManagementExportImport xmlns:xsd="http://www.w3.org/2001/XMLSchema"
                                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                                 xmlns="http://schemas.qualisystems.com/ResourceManagement/ExportImportConfigurationSchema.xsd">
@@ -204,11 +205,10 @@
         </Module>
     </Modules>
     <ResourceFamilies>
-        <ResourceFamily Name="L1 Optical Switch" IsMappableContainer="true" IsMappable="false" IsConnectable="false"
+        <ResourceFamily Name="L1 Switch" IsMappableContainer="true" IsMappable="false" IsConnectable="false"
                         IsLicenseCheckRequired="false" IsAllConnectedContainer="false" IsLockedByDefault="false"
-                        AcceptsMultipleConnections="false" Description="" SupportsMulticastMapping="false"
-                        SupportsLoopbackMapping="true" IsPowerSwitch="false" IsConsoleServer="false"
-                        ResourceType="Resource" Searchable="true">
+                        AcceptsMultipleConnections="false" SupportsMulticastMapping="true"
+                        SupportsLoopbackMapping="true" IsPowerSwitch="false" IsConsoleServer="false">
             <AttachedAttributes>
                 <AttachedAttribute Name="User" IsOverridable="true" IsLocal="true">
                     <AllowedValues/>
@@ -217,10 +217,7 @@
                     <AllowedValues/>
                 </AttachedAttribute>
             </AttachedAttributes>
-            <AttributeValues>
-                <AttributeValue Name="User" Value=""/>
-                <AttributeValue Name="Password" Value=""/>
-            </AttributeValues>
+            <AttributeValues/>
             <Models>
                 <ResourceModel Name="xStream 10" Description="" SupportsConcurrentCommands="false">
                     <AttachedAttributes/>
@@ -235,11 +232,10 @@
                 </ResourceModel>
             </Models>
         </ResourceFamily>
-        <ResourceFamily Name="L1 Optical Switch Port" IsMappableContainer="false" IsMappable="true" IsConnectable="true"
+        <ResourceFamily Name="L1 Switch Port" IsMappableContainer="false" IsMappable="true" IsConnectable="true"
                         IsLicenseCheckRequired="false" IsAllConnectedContainer="false" IsLockedByDefault="true"
-                        AcceptsMultipleConnections="false" Description="" SupportsMulticastMapping="false"
-                        SupportsLoopbackMapping="false" IsPowerSwitch="false" IsConsoleServer="false"
-                        ResourceType="Resource" Searchable="true">
+                        AcceptsMultipleConnections="false" SupportsMulticastMapping="false"
+                        SupportsLoopbackMapping="false" IsPowerSwitch="false" IsConsoleServer="false">
             <AttachedAttributes/>
             <AttributeValues/>
             <Models>
@@ -269,8 +265,6 @@
         </ResourceFamily>
     </ResourceFamilies>
     <DriverDescriptors>
-        <DriverDescriptor Name="IxiaXstream10" DriverType="L1SwitchTclDriver" CustomParams="Ixia.exe"/>
+        <DriverDescriptor Name="IxiaXstream10" DriverType="L1SwitchTclDriver" CustomParams="IxiaXstream10.exe"/>
     </DriverDescriptors>
 </ResourceManagementExportImport>
-
-
