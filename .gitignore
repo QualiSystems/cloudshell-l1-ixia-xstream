@@ -3,4 +3,3 @@ dist/*.*
 Logs
 build
 *.pyc
-*.pyc
