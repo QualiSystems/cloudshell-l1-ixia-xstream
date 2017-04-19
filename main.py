@@ -1,15 +1,14 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import sys, os
+import sys
+import os
 
 from common.configuration_parser import ConfigurationParser
 from common.helper.system_helper import get_file_folder
 from common.server_connection import ServerConnection
 from common.request_manager import RequestManager
 from common.request_handler import RequestHandler
-
-from cloudshell.core.logger.qs_logger import get_qs_logger
 
 if __name__ == '__main__':
     print 'Argument List: ', str(sys.argv)

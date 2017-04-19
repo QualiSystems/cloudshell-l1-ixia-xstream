@@ -7,8 +7,8 @@ import re
 from common.configuration_parser import ConfigurationParser
 from common.driver_handler_base import DriverHandlerBase
 from common.resource_info import ResourceInfo
-from ixia.ixia_xstrem_autoload_helper import IxiaXstreamAutoloadHelper
 from cloudshell.snmp.quali_snmp import QualiSnmp, SNMPV3Parameters, SNMPV2Parameters, PySnmpError
+from ixia.ixia_xstrem_autoload_helper import IxiaXstreamAutoloadHelper
 
 
 class IxiaXstreamDriverHandler(DriverHandlerBase):
@@ -120,27 +120,28 @@ class IxiaXstreamDriverHandler(DriverHandlerBase):
         if self._service_mode.lower() == "ssh":
             pass
         elif self._service_mode.lower() == "snmp":
-            self._add_snmp_filter(src_port, dst_port)
+            self._add_snmp_filter(src_port, dst_port, command_logger)
 
     def map_tap(self, src_port, dst_port, command_logger=None):
         if self._service_mode.lower() == "ssh":
             pass
         elif self._service_mode.lower() == "snmp":
-            self._add_snmp_filter(src_port, dst_port)
+            self._add_snmp_filter(src_port, dst_port, command_logger)
 
     def map_bidi(self, src_port, dst_port, command_logger=None):
         if self._service_mode.lower() == "ssh":
             pass
         elif self._service_mode.lower() == "snmp":
-            self._add_snmp_filter(src_port, dst_port)
-            self._add_snmp_filter(dst_port, src_port)
+            self._add_snmp_filter(src_port, dst_port, command_logger)
+            self._add_snmp_filter(dst_port, src_port, command_logger)
 
-    def _add_snmp_filter(self, src_port, dst_port):
+    def _add_snmp_filter(self, src_port, dst_port, logger):
         src_in_port = src_port[-1]
         dst_out_port = dst_port[-1]
         existing_rules = self._get_filter(src_in_port)
         if existing_rules:
-            self._append_snmp_filter(existing_rules, dst_out_port)
+            logger.info(existing_rules)
+            self._append_snmp_filter(existing_rules, dst_out_port, logger)
         else:
             rule_name_table = self._snmp_handler.get_table("NETOPTICS-XFAM-FILTER-MIB", "filterRuleName")
             index = self._incr_ctag()
@@ -149,15 +150,16 @@ class IxiaXstreamDriverHandler(DriverHandlerBase):
 
             self._set_snmp_filter(src_in_port, dst_out_port, index)
 
-    def _append_snmp_filter(self, existing_rules, dst_out_port):
+    def _append_snmp_filter(self, existing_rules, dst_out_port, logger):
         for index in existing_rules:
-            dst_port = self._snmp_handler.get_property(("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRedirPorts", index))
+            dst_port = self._snmp_handler.get_property("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRedirPorts", index)
             if dst_port:
                 dst_out_port = "{0},{1}".format(dst_port, dst_out_port)
+                logger.info(dst_out_port)
             try:
                 self._snmp_handler.set([(("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRedirPorts", index), dst_out_port)])
             except PySnmpError as e:
-                pass
+                logger.error(e.args)
             if dst_out_port not in self._snmp_handler.get_property("NETOPTICS-XFAM-FILTER-MIB",
                                                                    "filterRuleRedirPorts", index):
                 raise Exception(self.__class__.__name__, "Failed to append filter rule")
@@ -171,7 +173,7 @@ class IxiaXstreamDriverHandler(DriverHandlerBase):
                                     (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRedirPorts", index), src_in_port),
                                     (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleEnabled", index), 1),
                                     (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRowstatus", index), 4)])
-        except PySnmpError as e:
+        except PySnmpError:
             if not self._snmp_handler.get_property("NETOPTICS-XFAM-FILTER-MIB", "filterRuleName", index):
                 raise
 
@@ -190,9 +192,9 @@ class IxiaXstreamDriverHandler(DriverHandlerBase):
         result = []
         rule_name_table = self._snmp_handler.get_table("NETOPTICS-XFAM-FILTER-MIB", "filterRuleInPorts")
         for index, value in rule_name_table.iteritems():
-            filter_port = value.get("filterRuleInPorts", "")
-            if src_port in filter_port:
-                result.append(key)
+            filter_port = value.get("filterRuleInPorts")
+            if filter_port and int(src_port) == int(filter_port):
+                result.append(index)
         return result
 
     def _remove_filter(self, index):
