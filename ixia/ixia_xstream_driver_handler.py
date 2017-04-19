@@ -169,8 +169,8 @@ class IxiaXstreamDriverHandler(DriverHandlerBase):
             self._snmp_handler.set([(("NETOPTICS-XFAM-FILTER-MIB", "filterRuleAction", index), 1),
                                     (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleName", index),
                                      "{0} to {1}".format(src_in_port, dst_out_port)),
-                                    (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleInPorts", index), dst_out_port),
-                                    (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRedirPorts", index), src_in_port),
+                                    (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleInPorts", index), src_in_port),
+                                    (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRedirPorts", index), dst_out_port),
                                     (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleEnabled", index), 1),
                                     (("NETOPTICS-XFAM-FILTER-MIB", "filterRuleRowstatus", index), 4)])
         except PySnmpError:
