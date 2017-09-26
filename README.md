@@ -24,7 +24,7 @@ End users will be able to create routes, discover the Switch structure, configur
 ⦁	6.4 and above
 
 # The driver has been certified with the following Ixia Xstream Software Version:
-⦁	TBD
+⦁	x10_060700_041216
 
 # Installation
 Follow the instructions in the link below for installation:
