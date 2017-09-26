@@ -11,17 +11,20 @@ Shell version 1.0.0
 # Overview
 The Ixia Xstream L1 Shell provides CloudShell with the capability to communicate with switches that are part of the CloudShell inventory.
 End users will be able to create routes, discover the Switch structure, configure port settings and read attribute values from the switch using the CloudShell Portal, Resource Manager client or the CloudShell API.
-The Calient L1 Shell package includes: 
-File name	File description	
-Calient_S162.exe	Calient Driver Used by CloudShell Server	1.0.0
-calient_runtime_configuration.json	JSON file enabling additional configuration interface for the driver 1.0.0
-CalientResourceConfiguration.xml	An XML file holding all attribute and capabilities of the  L1 switches of the same vendor	1.0.0
-The Shell is compatible with the following CloudShell versions:
+
+# The Ixia Xstream L1 Shell package includes:
+File name				File description	
+IxiaXstream.exe				Ixia Driver Used by CloudShell Server					1.0.0
+ixia_xstream_runtime_configuration.json	JSON file enabling additional configuration interface for the driver 	1.0.0
+ixia_xstream_runtime_datamodel.xml	An XML file holding all attribute and capabilities of the L1 switches	1.0.0
+
+# The Shell is compatible with the following CloudShell versions:
 ⦁	6.4 and above
-⦁	
-⦁	The driver has been certified with the following Ixia Xstream Software Version:
-⦁	6.0-3
-Installation
+
+# The driver has been certified with the following Ixia Xstream Software Version:
+⦁	TBD
+
+# Installation
 Follow the instructions in the link below for installation:
 http://help.qualisystems.com/Online%20Help/7.0.0.0/Portal/Content/Admn/Cnct-Ctrl-L1-Swch.htm 
 
@@ -38,7 +41,6 @@ MapClearTo	Clears a uni-directional connection between two ports.
 
 # Bug fixes
 No
-	
 
 
 # Known issues
